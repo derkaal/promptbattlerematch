@@ -1,0 +1,167 @@
+# API Keys and Environment Files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.staging
+*.key
+*.pem
+*.p12
+*.pfx
+config/secrets.json
+secrets/
+credentials/
+.secrets
+.credentials
+
+# Node.js Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# Package Manager Files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+.yarn/
+.pnp.*
+
+# IDE and Editor Files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+*.sublime-project
+*.sublime-workspace
+.atom/
+.brackets.json
+.editorconfig
+
+# OS-specific Files
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# Build Artifacts and Logs
+dist/
+build/
+out/
+target/
+*.log
+*.log.*
+logs/
+*.tgz
+*.tar.gz
+*.zip
+*.rar
+*.7z
+
+# Runtime and Cache Files
+.cache/
+.tmp/
+.temp/
+tmp/
+temp/
+*.tmp
+*.temp
+.sass-cache/
+.parcel-cache/
+.next/
+.nuxt/
+.vuepress/dist/
+
+# Database Files
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+
+# Coverage and Testing
+coverage/
+.nyc_output/
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
+.nox/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Java
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+hs_err_pid*
+
+# C/C++
+*.o
+*.a
+*.so
+*.exe
+*.dll
+
+# Backup Files
+*.bak
+*.backup
+*.old
+*.orig
+*.save
+*~
+
+# System Files
+.fseventsd
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db

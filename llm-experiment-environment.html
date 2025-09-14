@@ -1,0 +1,2321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM Experiment Environment - Live Testing</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            padding: 20px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .header-controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .api-key-input {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            width: 200px;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            placeholder-color: rgba(255,255,255,0.7);
+        }
+
+        .api-key-input::placeholder {
+            color: rgba(255,255,255,0.7);
+        }
+
+        .framework-select {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            background: white;
+            color: #2c3e50;
+            min-width: 180px;
+        }
+
+        .run-button {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .run-button:hover:not(:disabled) {
+            background: #c0392b;
+            transform: translateY(-2px);
+        }
+
+        .run-button:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 0;
+            min-height: 600px;
+        }
+
+        .sidebar {
+            background: #f8f9fa;
+            padding: 30px;
+            border-right: 1px solid #e9ecef;
+        }
+
+        .status-section {
+            margin-bottom: 30px;
+        }
+
+        .status-section h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+
+        .tier-status {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .status-icon {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+
+        .status-pending { background: #95a5a6; }
+        .status-running { background: #f39c12; animation: pulse 1.5s infinite; }
+        .status-complete { background: #27ae60; }
+        .status-error { background: #e74c3c; }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .progress-section {
+            margin-top: 20px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #3498db, #2980b9);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .results-panel {
+            padding: 30px;
+            overflow-y: auto;
+        }
+
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .results-table th {
+            background: #34495e;
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .results-table th:hover {
+            background: #2c3e50;
+        }
+
+        .results-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .results-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .metric-score {
+            font-weight: 600;
+            padding: 4px 8px;
+            border-radius: 4px;
+            color: white;
+        }
+
+        .score-excellent { background: #27ae60; }
+        .score-good { background: #f39c12; }
+        .score-poor { background: #e74c3c; }
+
+        .log-panel {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 20px;
+            height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+
+        .log-entry {
+            margin-bottom: 5px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .log-timestamp {
+            color: #95a5a6;
+            flex-shrink: 0;
+        }
+
+        .log-level-info { color: #3498db; }
+        .log-level-success { color: #27ae60; }
+        .log-level-warning { color: #f39c12; }
+        .log-level-error { color: #e74c3c; }
+
+        .empty-state {
+            text-align: center;
+            color: #7f8c8d;
+            padding: 60px 20px;
+        }
+
+        .empty-state h3 {
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .sidebar {
+                border-right: none;
+                border-bottom: 1px solid #e9ecef;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .header-controls {
+                justify-content: center;
+            }
+            
+            .api-key-input {
+                width: 100%;
+                margin-bottom: 10px;
+            }
+            
+            .container {
+                margin: 10px;
+                border-radius: 8px;
+            }
+            
+            .results-table {
+                font-size: 12px;
+            }
+            
+            .results-table th,
+            .results-table td {
+                padding: 8px;
+            }
+        }
+
+        .framework-description {
+            background: #e8f4fd;
+            border-left: 4px solid #3498db;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 0 6px 6px 0;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .api-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+
+        .api-status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .api-connected { background: #27ae60; }
+        .api-disconnected { background: #e74c3c; }
+        .api-testing { background: #f39c12; animation: pulse 1s infinite; }
+
+        .error-message {
+            background: #fee;
+            border: 1px solid #fcc;
+            color: #c33;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-size: 14px;
+        }
+
+        .test-details {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .info-section {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .info-section h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 16px;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 8px;
+        }
+
+        .overview-content p {
+            margin-bottom: 12px;
+            line-height: 1.5;
+            font-size: 14px;
+        }
+
+        .kpi-explanations {
+            display: grid;
+            gap: 15px;
+        }
+
+        .kpi-item {
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+        }
+
+        .kpi-item strong {
+            color: #2c3e50;
+            font-size: 14px;
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        .kpi-item p {
+            margin: 0 0 8px 0;
+            font-size: 13px;
+            line-height: 1.4;
+            color: #495057;
+        }
+
+        .kpi-formula {
+            background: #e8f4fd;
+            border-left: 3px solid #3498db;
+            padding: 8px 12px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: #2c3e50;
+            border-radius: 0 4px 4px 0;
+        }
+
+        /* Responsive adjustments for new sections */
+        @media (max-width: 768px) {
+            .info-section {
+                margin: 15px 0;
+                padding: 15px;
+            }
+            
+            .kpi-item {
+                padding: 12px;
+            }
+        }
+
+        /* Audit Log Styles */
+        .audit-tab-container {
+            display: flex;
+            border-bottom: 2px solid #e9ecef;
+            margin-bottom: 20px;
+        }
+
+        .audit-tab {
+            padding: 12px 24px;
+            background: #f8f9fa;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            color: #495057;
+            border-radius: 6px 6px 0 0;
+            margin-right: 4px;
+            transition: all 0.3s ease;
+        }
+
+        .audit-tab.active {
+            background: #3498db;
+            color: white;
+        }
+
+        .audit-tab:hover:not(.active) {
+            background: #e9ecef;
+        }
+
+        .audit-content {
+            display: none;
+        }
+
+        .audit-content.active {
+            display: block;
+        }
+
+        .audit-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .audit-search {
+            padding: 8px 12px;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            font-size: 14px;
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .audit-filter {
+            padding: 8px 12px;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            font-size: 14px;
+            background: white;
+        }
+
+        .audit-export-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .audit-export-btn:hover {
+            background: #218838;
+        }
+
+        .audit-clear-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .audit-clear-btn:hover {
+            background: #c82333;
+        }
+
+        .audit-log-container {
+            max-height: 500px;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            background: white;
+        }
+
+        .audit-log-entry {
+            border-bottom: 1px solid #e9ecef;
+            padding: 15px;
+            transition: background 0.2s ease;
+        }
+
+        .audit-log-entry:hover {
+            background: #f8f9fa;
+        }
+
+        .audit-log-entry:last-child {
+            border-bottom: none;
+        }
+
+        .audit-log-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .audit-log-meta {
+            display: flex;
+            gap: 15px;
+            font-size: 12px;
+            color: #6c757d;
+            flex-wrap: wrap;
+        }
+
+        .audit-log-id {
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .audit-log-timestamp {
+            color: #6c757d;
+        }
+
+        .audit-log-provider {
+            background: #e3f2fd;
+            color: #1976d2;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .audit-log-framework {
+            background: #f3e5f5;
+            color: #7b1fa2;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .audit-log-status {
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .audit-status-success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .audit-status-error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .audit-log-details {
+            margin-top: 10px;
+        }
+
+        .audit-section {
+            margin-bottom: 15px;
+        }
+
+        .audit-section-title {
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 8px;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .audit-section-content {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 12px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.4;
+            max-height: 200px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .audit-json {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 12px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.4;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .audit-expand-btn {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            cursor: pointer;
+            margin-top: 5px;
+        }
+
+        .audit-expand-btn:hover {
+            background: #5a6268;
+        }
+
+        .audit-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .audit-stat-card {
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .audit-stat-number {
+            font-size: 24px;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+
+        .audit-stat-label {
+            font-size: 12px;
+            color: #6c757d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Responsive audit styles */
+        @media (max-width: 768px) {
+            .audit-controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .audit-search {
+                min-width: auto;
+            }
+            
+            .audit-log-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .audit-log-meta {
+                flex-direction: column;
+                gap: 5px;
+            }
+            
+            .audit-stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>🧠 LLM Experiment Environment - Live Testing</h1>
+            <div class="header-controls">
+                <select class="framework-select" id="providerSelect" style="min-width: 140px;">
+                    <option value="">Select Provider</option>
+                    <option value="openai">OpenAI</option>
+                    <option value="gemini">Google Gemini</option>
+                    <option value="mistral">Mistral AI</option>
+                    <option value="claude">Anthropic Claude</option>
+                </select>
+                <input type="password" class="api-key-input" id="apiKey" placeholder="Select Provider First">
+                <select class="framework-select" id="frameworkSelect">
+                    <option value="">Select Framework</option>
+                    <option value="designers-paradigm">Designer's Paradigm</option>
+                    <option value="linguistic-imperative">Linguistic Imperative</option>
+                    <option value="managerial-directive">Managerial Directive</option>
+                    <option value="hip-hop-g-funk">Hip-Hop G-Funk Protocol</option>
+                    <option value="all">All Frameworks</option>
+                </select>
+                <button class="run-button" id="runButton">
+                    <span id="runButtonText">Run Tests</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Tab Navigation -->
+        <div class="audit-tab-container">
+            <button class="audit-tab active" id="resultsTab" onclick="switchTab('results')">Test Results</button>
+            <button class="audit-tab" id="auditTab" onclick="switchTab('audit')">Audit Logs</button>
+        </div>
+
+        <div class="main-content">
+            <aside class="sidebar">
+                <div class="status-section">
+                    <h3>Test Status</h3>
+                    <div class="tier-status">
+                        <div class="status-icon status-pending" id="easyStatus"></div>
+                        <span>Easy Tier</span>
+                    </div>
+                    <div class="tier-status">
+                        <div class="status-icon status-pending" id="mediumStatus"></div>
+                        <span>Medium Tier</span>
+                    </div>
+                    <div class="tier-status">
+                        <div class="status-icon status-pending" id="hardStatus"></div>
+                        <span>Hard Tier</span>
+                    </div>
+                </div>
+
+                <div class="progress-section">
+                    <h3>Progress</h3>
+                    <div id="progressText">Ready to start</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                </div>
+
+                <div class="api-status" id="apiStatus">
+                    <div class="api-status-indicator api-disconnected" id="apiIndicator"></div>
+                    <span id="apiStatusText">API Disconnected</span>
+                </div>
+
+                <div class="framework-description" id="frameworkDescription" style="display: none;">
+                    <strong>Framework:</strong> <span id="frameworkName"></span>
+                    <p id="frameworkDetails"></p>
+                </div>
+
+                <div class="info-section">
+                    <h3>Experiment Overview</h3>
+                    <div class="overview-content">
+                        <p><strong>Purpose:</strong> Compare 4 distinct prompting frameworks across tool-calling scenarios to identify optimal approaches for different complexity levels.</p>
+                        <p><strong>Method:</strong> Each framework is tested against 15 scenarios (5 per difficulty tier) using live API calls to measure real-world performance.</p>
+                        <p><strong>Frameworks:</strong> Designer's Paradigm, Linguistic Imperative, Managerial Directive, and Hip-Hop G-Funk Protocol.</p>
+                    </div>
+                </div>
+
+                <div class="info-section">
+                    <h3>KPI Explanations</h3>
+                    <div class="kpi-explanations">
+                        <div class="kpi-item">
+                            <strong>Tool Precision:</strong>
+                            <p>Percentage of correct tool selections. Measures how accurately the framework identifies the right tools for each scenario.</p>
+                            <div class="kpi-formula">Formula: (Correct Tools / Total Tools Called) × 100</div>
+                        </div>
+                        <div class="kpi-item">
+                            <strong>Argument F1 Score:</strong>
+                            <p>Harmonic mean of precision and recall for tool arguments. Evaluates both completeness and accuracy of parameters.</p>
+                            <div class="kpi-formula">Formula: 2 × (Precision × Recall) / (Precision + Recall)</div>
+                        </div>
+                        <div class="kpi-item">
+                            <strong>Ambiguity Hit Rate:</strong>
+                            <p>Success rate in handling unclear or underspecified scenarios. Tests framework adaptability to real-world ambiguity.</p>
+                            <div class="kpi-formula">Formula: (Successful Ambiguous Scenarios / Total Ambiguous) × 100</div>
+                        </div>
+                        <div class="kpi-item">
+                            <strong>Composite Score:</strong>
+                            <p>Weighted average combining all metrics. Tool Precision (40%), Argument F1 (35%), Ambiguity Hit Rate (25%).</p>
+                            <div class="kpi-formula">Overall framework effectiveness indicator</div>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <main class="results-panel">
+                <!-- Test Results Tab Content -->
+                <div class="audit-content active" id="resultsContent">
+                    <div class="empty-state" id="emptyState">
+                        <h3>Ready to Begin Live Testing</h3>
+                        <p>Select a provider, framework, and enter your API key to start testing with real API calls.</p>
+                        <div class="test-details">
+                            <p>This environment supports OpenAI, Google Gemini, Mistral AI, and Anthropic Claude to test different prompting frameworks against tool-calling scenarios.</p>
+                        </div>
+                    </div>
+
+                    <table class="results-table" id="resultsTable" style="display: none;">
+                        <thead>
+                            <tr>
+                                <th onclick="sortTable(0)">Framework</th>
+                                <th onclick="sortTable(1)">Difficulty</th>
+                                <th onclick="sortTable(2)">Tool Precision</th>
+                                <th onclick="sortTable(3)">Argument F1</th>
+                                <th onclick="sortTable(4)">Ambiguity Hit Rate</th>
+                                <th onclick="sortTable(5)">Composite Score</th>
+                            </tr>
+                        </thead>
+                        <tbody id="resultsBody">
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Audit Logs Tab Content -->
+                <div class="audit-content" id="auditContent">
+                    <!-- Audit Statistics -->
+                    <div class="audit-stats" id="auditStats">
+                        <div class="audit-stat-card">
+                            <div class="audit-stat-number" id="totalAuditLogs">0</div>
+                            <div class="audit-stat-label">Total Logs</div>
+                        </div>
+                        <div class="audit-stat-card">
+                            <div class="audit-stat-number" id="successfulCalls">0</div>
+                            <div class="audit-stat-label">Successful</div>
+                        </div>
+                        <div class="audit-stat-card">
+                            <div class="audit-stat-number" id="failedCalls">0</div>
+                            <div class="audit-stat-label">Failed</div>
+                        </div>
+                        <div class="audit-stat-card">
+                            <div class="audit-stat-number" id="avgResponseTime">0ms</div>
+                            <div class="audit-stat-label">Avg Response</div>
+                        </div>
+                    </div>
+
+                    <!-- Audit Controls -->
+                    <div class="audit-controls">
+                        <input type="text" class="audit-search" id="auditSearch" placeholder="Search audit logs...">
+                        <select class="audit-filter" id="auditProviderFilter">
+                            <option value="">All Providers</option>
+                            <option value="openai">OpenAI</option>
+                            <option value="gemini">Google Gemini</option>
+                            <option value="mistral">Mistral AI</option>
+                            <option value="claude">Anthropic Claude</option>
+                        </select>
+                        <select class="audit-filter" id="auditStatusFilter">
+                            <option value="">All Status</option>
+                            <option value="success">Success</option>
+                            <option value="error">Error</option>
+                        </select>
+                        <button class="audit-export-btn" id="exportAuditBtn" onclick="exportAuditLogs()">Export JSON</button>
+                        <button class="audit-clear-btn" id="clearAuditBtn" onclick="clearAuditLogs()">Clear Logs</button>
+                    </div>
+
+                    <!-- Audit Log Container -->
+                    <div class="audit-log-container" id="auditLogContainer">
+                        <div class="empty-state">
+                            <h3>No Audit Logs Yet</h3>
+                            <p>Run some tests to see detailed audit logs of API interactions here.</p>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <div class="log-panel" id="logPanel">
+            <div class="log-entry">
+                <span class="log-timestamp">[Ready]</span>
+                <span class="log-level-info">Live testing environment initialized. Enter API key to begin.</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Framework definitions with simplified templates for rhetorical focus
+        // Scientific rationale: Complex placeholders obscure rhetorical differences between frameworks
+        const FRAMEWORKS = {
+            'designers-paradigm': {
+                name: "Designer's Paradigm",
+                description: "Visual-spatial reasoning with structured decomposition. Excels at complex multi-tool scenarios.",
+                template: `DESIGN BRIEF: Analyze this scenario with visual-spatial thinking.
+Break down the requirements into component relationships.
+Identify the optimal tools and validate design coherence.
+Apply systematic design process to achieve the objective.`,
+                effectiveness: { easy: 0.85, medium: 0.78, hard: 0.72 }
+            },
+            'linguistic-imperative': {
+                name: "Linguistic Imperative",
+                description: "Natural language flow with contextual reasoning. Strong with ambiguous scenarios.",
+                template: `I need to understand what actions are required in this situation.
+Let me think through this step by step with natural reasoning.
+What is the core objective and how can available tools help achieve this?
+How do these tools work together to solve the problem?`,
+                effectiveness: { easy: 0.79, medium: 0.82, hard: 0.89 }
+            },
+            'managerial-directive': {
+                name: "Managerial Directive",
+                description: "Goal-oriented execution with clear hierarchies. Excellent for structured workflows.",
+                template: `OBJECTIVE: Execute this task with clear goal-oriented planning.
+Define success criteria and create a structured execution plan.
+Organize work into phases with primary, secondary, and validation steps.
+Execute the plan with proper sequencing and oversight.`,
+                effectiveness: { easy: 0.91, medium: 0.71, hard: 0.65 }
+            },
+            'hip-hop-g-funk': {
+                name: "Hip-Hop G-Funk Protocol",
+                description: "Rhythmic pattern recognition with creative synthesis. Excels at pattern recognition.",
+                template: `Yo, check this scenario and break it down to the beat!
+🎵 What's the vibe and what tools we got in the mix?
+🎵 How we gonna flow and make this solution smooth?
+🎵 Keep it funky, keep it real, and make it work right!`,
+                effectiveness: { easy: 0.77, medium: 0.85, hard: 0.94 }
+            }
+        };
+
+        // Test scenarios updated to match reduced toolset
+        // Scientific rationale: Scenarios now focus on core tool interactions without overwhelming complexity
+        const TEST_SCENARIOS = {
+            easy: [
+                {
+                    id: 'easy-1',
+                    description: "Create a new file called 'report.txt' with summary content",
+                    expectedTools: [{ name: 'create_file', args: { filename: 'report.txt', content: 'Summary report', format: 'txt' } }],
+                    ambiguityLevel: 0.1,
+                    expectsNoTools: false
+                },
+                {
+                    id: 'easy-2',
+                    description: "Get the current weather for New York",
+                    expectedTools: [{ name: 'get_weather', args: { location: 'New York', units: 'metric' } }],
+                    ambiguityLevel: 0.2,
+                    expectsNoTools: false
+                },
+                {
+                    id: 'easy-3',
+                    description: "Calculate the average of these numbers: 45, 67, 23, 89",
+                    expectedTools: [{ name: 'calculate', args: { operation: 'average', data: [45, 67, 23, 89] } }],
+                    ambiguityLevel: 0.1,
+                    expectsNoTools: false
+                },
+                {
+                    id: 'easy-4',
+                    description: "Search for customer records in the main database",
+                    expectedTools: [{ name: 'search_database', args: { query: 'customer records', database: 'main' } }],
+                    ambiguityLevel: 0.2,
+                    expectsNoTools: false
+                },
+                {
+                    id: 'easy-5',
+                    description: "Send an email to the team about the meeting",
+                    expectedTools: [{ name: 'send_email', args: { recipients: ['team'], subject: 'Meeting', content: 'Meeting information' } }],
+                    ambiguityLevel: 0.2,
+                    expectsNoTools: false
+                }
+            ],
+            medium: [
+                {
+                    id: 'medium-1',
+                    description: "Analyze sales data and create a summary report file",
+                    expectedTools: [
+                        { name: 'analyze_data', args: { data_source: 'sales', analysis_type: 'summary', output_format: 'report' } },
+                        { name: 'create_file', args: { filename: 'sales_summary.txt', content: 'Sales analysis results', format: 'txt' } }
+                    ],
+                    ambiguityLevel: 0.4,
+                    expectsNoTools: false
+                },
+                {
+                    id: 'medium-2',
+                    description: "Find weather data for multiple cities and calculate temperature trends",
+                    expectedTools: [
+                        { name: 'get_weather', args: { location: 'multiple cities' } },
+                        { name: 'calculate', args: { operation: 'trend analysis', data: [] } }
+                    ],
+                    ambiguityLevel: 0.3,
+                    expectsNoTools: false
+                },
+                {
+                    id: 'medium-3',
+                    description: "Search for project data and email the results to stakeholders",
+                    expectedTools: [
+                        { name: 'search_database', args: { query: 'project data', database: 'projects' } },
+                        { name: 'send_email', args: { recipients: ['stakeholders'], subject: 'Project Data', content: 'Search results' } }
+                    ],
+                    ambiguityLevel: 0.5,
+                    expectsNoTools: false
+                },
+                {
+                    id: 'medium-4',
+                    description: "Analyze customer feedback and create a trends report",
+                    expectedTools: [
+                        { name: 'analyze_data', args: { data_source: 'customer_feedback', analysis_type: 'trend', output_format: 'report' } },
+                        { name: 'create_file', args: { filename: 'feedback_trends.txt', content: 'Trend analysis', format: 'txt' } }
+                    ],
+                    ambiguityLevel: 0.4,
+                    expectsNoTools: false
+                },
+                {
+                    id: 'medium-5',
+                    description: "Calculate quarterly metrics and email summary to management",
+                    expectedTools: [
+                        { name: 'calculate', args: { operation: 'quarterly metrics', data: [] } },
+                        { name: 'send_email', args: { recipients: ['management'], subject: 'Quarterly Summary', content: 'Metrics summary' } }
+                    ],
+                    ambiguityLevel: 0.6,
+                    expectsNoTools: false
+                }
+            ],
+            hard: [
+                {
+                    id: 'hard-1',
+                    description: "The system performance seems off - investigate and report findings",
+                    expectedTools: [
+                        { name: 'search_database', args: { query: 'system performance', database: 'logs' } },
+                        { name: 'analyze_data', args: { data_source: 'performance_logs', analysis_type: 'summary', output_format: 'report' } },
+                        { name: 'create_file', args: { filename: 'performance_report.txt', content: 'Investigation results', format: 'txt' } }
+                    ],
+                    ambiguityLevel: 0.8,
+                    expectsNoTools: false
+                },
+                {
+                    id: 'hard-2',
+                    description: "Analyze market trends and prepare comprehensive stakeholder communication",
+                    expectedTools: [
+                        { name: 'search_database', args: { query: 'market trends', database: 'market_data' } },
+                        { name: 'analyze_data', args: { data_source: 'market_data', analysis_type: 'trend', output_format: 'report' } },
+                        { name: 'send_email', args: { recipients: ['stakeholders'], subject: 'Market Analysis', content: 'Comprehensive market trends' } }
+                    ],
+                    ambiguityLevel: 0.9,
+                    expectsNoTools: false
+                },
+                {
+                    id: 'hard-3',
+                    description: "Something is wrong with our data - please investigate",
+                    expectedTools: [
+                        { name: 'search_database', args: { query: 'data issues', database: 'main' } },
+                        { name: 'analyze_data', args: { data_source: 'main_database', analysis_type: 'summary', output_format: 'report' } }
+                    ],
+                    ambiguityLevel: 0.7,
+                    expectsNoTools: false
+                },
+                {
+                    id: 'hard-4',
+                    description: "Make things better",
+                    expectedTools: [],
+                    ambiguityLevel: 1.0,
+                    expectsNoTools: true  // This is an ambiguous prompt that should result in no tool calls
+                },
+                {
+                    id: 'hard-5',
+                    description: "Handle the urgent situation immediately",
+                    expectedTools: [
+                        { name: 'search_database', args: { query: 'urgent issues', database: 'alerts' } },
+                        { name: 'send_email', args: { recipients: ['emergency_team'], subject: 'Urgent Alert', content: 'Immediate attention required' } }
+                    ],
+                    ambiguityLevel: 0.8,
+                    expectsNoTools: false
+                }
+            ]
+        };
+
+        // Core toolset reduced for cleaner experimental results
+        // Scientific rationale: 30+ tools overwhelm the model, making it hard to isolate framework effectiveness
+        // Reduced to 6 distinct tools that cover the test scenarios effectively
+        const AVAILABLE_TOOLS = [
+            {
+                type: "function",
+                function: {
+                    name: "get_weather",
+                    description: "Get current weather information for a location",
+                    parameters: {
+                        type: "object",
+                        properties: {
+                            location: { type: "string", description: "City or location name" },
+                            units: { type: "string", enum: ["metric", "imperial"], description: "Temperature units" }
+                        },
+                        required: ["location"]
+                    }
+                }
+            },
+            {
+                type: "function",
+                function: {
+                    name: "search_database",
+                    description: "Search for information in databases",
+                    parameters: {
+                        type: "object",
+                        properties: {
+                            query: { type: "string", description: "Search query" },
+                            database: { type: "string", description: "Database to search" },
+                            filters: { type: "object", description: "Additional search filters" }
+                        },
+                        required: ["query"]
+                    }
+                }
+            },
+            {
+                type: "function",
+                function: {
+                    name: "create_file",
+                    description: "Create a new file with specified content",
+                    parameters: {
+                        type: "object",
+                        properties: {
+                            filename: { type: "string", description: "Name of the file to create" },
+                            content: { type: "string", description: "Content to write to the file" },
+                            format: { type: "string", enum: ["txt", "json", "csv"], description: "File format" }
+                        },
+                        required: ["filename", "content"]
+                    }
+                }
+            },
+            {
+                type: "function",
+                function: {
+                    name: "calculate",
+                    description: "Perform mathematical calculations and data analysis",
+                    parameters: {
+                        type: "object",
+                        properties: {
+                            operation: { type: "string", description: "Mathematical operation or analysis type" },
+                            data: { type: "array", items: { type: "number" }, description: "Numbers or data to operate on" },
+                            parameters: { type: "object", description: "Additional calculation parameters" }
+                        },
+                        required: ["operation", "data"]
+                    }
+                }
+            },
+            {
+                type: "function",
+                function: {
+                    name: "send_email",
+                    description: "Send email to recipients",
+                    parameters: {
+                        type: "object",
+                        properties: {
+                            recipients: { type: "array", items: { type: "string" }, description: "Email recipients" },
+                            subject: { type: "string", description: "Email subject" },
+                            content: { type: "string", description: "Email content" },
+                            attachments: { type: "array", items: { type: "string" }, description: "File attachments" }
+                        },
+                        required: ["recipients", "subject", "content"]
+                    }
+                }
+            },
+            {
+                type: "function",
+                function: {
+                    name: "analyze_data",
+                    description: "Analyze data and generate insights",
+                    parameters: {
+                        type: "object",
+                        properties: {
+                            data_source: { type: "string", description: "Source of data to analyze" },
+                            analysis_type: { type: "string", enum: ["summary", "trend", "comparison", "prediction"], description: "Type of analysis" },
+                            output_format: { type: "string", enum: ["report", "chart", "table"], description: "Output format" }
+                        },
+                        required: ["data_source", "analysis_type"]
+                    }
+                }
+            }
+        ];
+
+        // API Provider configurations
+        const API_PROVIDERS = {
+            openai: {
+                name: 'OpenAI',
+                endpoint: 'https://api.openai.com/v1/',
+                model: 'gpt-4-turbo-preview',
+                keyPlaceholder: 'Enter OpenAI API Key',
+                testEndpoint: 'models',
+                authHeader: 'Bearer'
+            },
+            gemini: {
+                name: 'Google Gemini',
+                endpoint: 'https://generativelanguage.googleapis.com/v1beta/',
+                model: 'gemini-1.5-flash-latest',
+                keyPlaceholder: 'Enter Google API Key',
+                testEndpoint: 'models',
+                authHeader: 'key'
+            },
+            mistral: {
+                name: 'Mistral AI',
+                endpoint: 'https://api.mistral.ai/v1/',
+                model: 'mistral-large-latest',
+                keyPlaceholder: 'Enter Mistral API Key',
+                testEndpoint: 'models',
+                authHeader: 'Bearer'
+            },
+            claude: {
+                name: 'Anthropic Claude',
+                endpoint: 'https://api.anthropic.com/v1/',
+                model: 'claude-3-5-sonnet-20241022',
+                keyPlaceholder: 'Enter Anthropic API Key',
+                testEndpoint: 'messages',
+                authHeader: 'x-api-key',
+                requiresSpecialTest: true,
+                requiresCorsHeader: true
+            }
+        };
+
+        // Global state
+        let currentApiKey = '';
+        let currentProvider = '';
+        let isRunning = false;
+        let testResults = [];
+        let currentProgress = 0;
+        let totalTests = 0;
+        
+        // Audit logging system
+        let auditLogs = [];
+        let auditLogId = 0;
+        let filteredAuditLogs = [];
+
+        // Audit logging functions
+        function createAuditLog(type, data) {
+            const auditLog = {
+                id: ++auditLogId,
+                timestamp: new Date().toISOString(),
+                type: type, // 'request', 'response', 'error'
+                provider: currentProvider,
+                framework: frameworkSelect.value,
+                scenario: data.scenario || null,
+                tier: data.tier || null,
+                data: data,
+                responseTime: data.responseTime || null,
+                status: data.status || 'pending'
+            };
+            
+            auditLogs.unshift(auditLog); // Add to beginning for newest first
+            updateAuditStats();
+            refreshAuditDisplay();
+            
+            return auditLog;
+        }
+
+        function logApiRequest(prompt, scenario, tier) {
+            return createAuditLog('request', {
+                scenario: scenario,
+                tier: tier,
+                prompt: prompt,
+                provider: currentProvider,
+                model: API_PROVIDERS[currentProvider]?.model,
+                tools: AVAILABLE_TOOLS,
+                status: 'sent'
+            });
+        }
+
+        function logApiResponse(requestLog, response, responseTime) {
+            const responseLog = createAuditLog('response', {
+                scenario: requestLog.data.scenario,
+                tier: requestLog.data.tier,
+                requestId: requestLog.id,
+                response: response,
+                responseTime: responseTime,
+                status: 'success',
+                toolCalls: extractToolCalls(response)
+            });
+            
+            // Update the original request log
+            requestLog.status = 'completed';
+            requestLog.responseTime = responseTime;
+            
+            return responseLog;
+        }
+
+        function logApiError(requestLog, error, responseTime) {
+            const errorLog = createAuditLog('error', {
+                scenario: requestLog.data.scenario,
+                tier: requestLog.data.tier,
+                requestId: requestLog.id,
+                error: error.message,
+                responseTime: responseTime,
+                status: 'error'
+            });
+            
+            // Update the original request log
+            requestLog.status = 'error';
+            requestLog.responseTime = responseTime;
+            
+            return errorLog;
+        }
+
+        function updateAuditStats() {
+            const totalLogs = auditLogs.length;
+            const successfulCalls = auditLogs.filter(log => log.status === 'success').length;
+            const failedCalls = auditLogs.filter(log => log.status === 'error').length;
+            const responseTimes = auditLogs.filter(log => log.responseTime).map(log => log.responseTime);
+            const avgResponseTime = responseTimes.length > 0
+                ? Math.round(responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length)
+                : 0;
+
+            document.getElementById('totalAuditLogs').textContent = totalLogs;
+            document.getElementById('successfulCalls').textContent = successfulCalls;
+            document.getElementById('failedCalls').textContent = failedCalls;
+            document.getElementById('avgResponseTime').textContent = avgResponseTime + 'ms';
+        }
+
+        function refreshAuditDisplay() {
+            applyAuditFilters();
+        }
+
+        function applyAuditFilters() {
+            const searchTerm = document.getElementById('auditSearch')?.value.toLowerCase() || '';
+            const providerFilter = document.getElementById('auditProviderFilter')?.value || '';
+            const statusFilter = document.getElementById('auditStatusFilter')?.value || '';
+
+            filteredAuditLogs = auditLogs.filter(log => {
+                const matchesSearch = !searchTerm ||
+                    log.data.scenario?.toLowerCase().includes(searchTerm) ||
+                    log.provider?.toLowerCase().includes(searchTerm) ||
+                    log.framework?.toLowerCase().includes(searchTerm) ||
+                    log.type.toLowerCase().includes(searchTerm);
+                
+                const matchesProvider = !providerFilter || log.provider === providerFilter;
+                const matchesStatus = !statusFilter || log.status === statusFilter;
+
+                return matchesSearch && matchesProvider && matchesStatus;
+            });
+
+            displayAuditLogs();
+        }
+
+        function displayAuditLogs() {
+            const container = document.getElementById('auditLogContainer');
+            if (!container) return;
+            
+            if (filteredAuditLogs.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <h3>No Audit Logs Found</h3>
+                        <p>No logs match your current filters, or no tests have been run yet.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = filteredAuditLogs.map(log => createAuditLogHTML(log)).join('');
+        }
+
+        function createAuditLogHTML(log) {
+            const timestamp = new Date(log.timestamp).toLocaleString();
+            const statusClass = log.status === 'success' ? 'audit-status-success' :
+                               log.status === 'error' ? 'audit-status-error' : '';
+
+            let content = '';
+            
+            if (log.type === 'request') {
+                content = `
+                    <div class="audit-section">
+                        <div class="audit-section-title">Request Prompt</div>
+                        <div class="audit-section-content">${escapeHtml(log.data.prompt || 'N/A')}</div>
+                    </div>
+                    <div class="audit-section">
+                        <div class="audit-section-title">Available Tools</div>
+                        <div class="audit-json">${JSON.stringify(log.data.tools, null, 2)}</div>
+                    </div>
+                `;
+            } else if (log.type === 'response') {
+                content = `
+                    <div class="audit-section">
+                        <div class="audit-section-title">API Response</div>
+                        <div class="audit-json">${JSON.stringify(log.data.response, null, 2)}</div>
+                    </div>
+                    <div class="audit-section">
+                        <div class="audit-section-title">Extracted Tool Calls</div>
+                        <div class="audit-json">${JSON.stringify(log.data.toolCalls, null, 2)}</div>
+                    </div>
+                `;
+            } else if (log.type === 'error') {
+                content = `
+                    <div class="audit-section">
+                        <div class="audit-section-title">Error Details</div>
+                        <div class="audit-section-content">${escapeHtml(log.data.error || 'Unknown error')}</div>
+                    </div>
+                `;
+            }
+
+            return `
+                <div class="audit-log-entry">
+                    <div class="audit-log-header">
+                        <div class="audit-log-meta">
+                            <span class="audit-log-id">#${log.id}</span>
+                            <span class="audit-log-timestamp">${timestamp}</span>
+                            <span class="audit-log-provider">${log.provider || 'N/A'}</span>
+                            <span class="audit-log-framework">${log.framework || 'N/A'}</span>
+                            <span class="audit-log-status ${statusClass}">${log.status}</span>
+                        </div>
+                        <div>
+                            <strong>${log.type.toUpperCase()}</strong>
+                            ${log.data.scenario ? `- ${log.data.scenario} (${log.data.tier})` : ''}
+                            ${log.responseTime ? `- ${log.responseTime}ms` : ''}
+                        </div>
+                    </div>
+                    <div class="audit-log-details">
+                        ${content}
+                    </div>
+                </div>
+            `;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Tab switching function
+        function switchTab(tabName) {
+            // Update tab buttons
+            document.querySelectorAll('.audit-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.getElementById(tabName + 'Tab').classList.add('active');
+
+            // Update content
+            document.querySelectorAll('.audit-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(tabName + 'Content').classList.add('active');
+        }
+
+        // Export audit logs
+        function exportAuditLogs() {
+            const dataStr = JSON.stringify(auditLogs, null, 2);
+            const dataBlob = new Blob([dataStr], {type: 'application/json'});
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `audit-logs-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }
+
+        // Clear audit logs
+        function clearAuditLogs() {
+            if (confirm('Are you sure you want to clear all audit logs? This action cannot be undone.')) {
+                auditLogs = [];
+                auditLogId = 0;
+                updateAuditStats();
+                refreshAuditDisplay();
+                logMessage('info', 'Audit logs cleared');
+            }
+        }
+
+        // DOM elements
+        const providerSelect = document.getElementById('providerSelect');
+        const apiKeyInput = document.getElementById('apiKey');
+        const frameworkSelect = document.getElementById('frameworkSelect');
+        const runButton = document.getElementById('runButton');
+        const runButtonText = document.getElementById('runButtonText');
+        const logPanel = document.getElementById('logPanel');
+        const resultsTable = document.getElementById('resultsTable');
+        const resultsBody = document.getElementById('resultsBody');
+        const emptyState = document.getElementById('emptyState');
+        const progressFill = document.getElementById('progressFill');
+        const progressText = document.getElementById('progressText');
+        const apiIndicator = document.getElementById('apiIndicator');
+        const apiStatusText = document.getElementById('apiStatusText');
+        const frameworkDescription = document.getElementById('frameworkDescription');
+        const frameworkName = document.getElementById('frameworkName');
+        const frameworkDetails = document.getElementById('frameworkDetails');
+
+        // Event listeners will be attached in initializeApp()
+
+        // Provider selection handler
+        function handleProviderChange() {
+            currentProvider = providerSelect.value;
+            logMessage('info', `Provider change event triggered. Selected value: "${currentProvider}"`);
+            
+            if (currentProvider && API_PROVIDERS[currentProvider]) {
+                const provider = API_PROVIDERS[currentProvider];
+                apiKeyInput.placeholder = provider.keyPlaceholder;
+                apiKeyInput.disabled = false;
+                logMessage('info', `Selected ${provider.name} as API provider`);
+            } else {
+                apiKeyInput.placeholder = 'Select Provider First';
+                apiKeyInput.disabled = true;
+                apiKeyInput.value = '';
+                currentApiKey = '';
+                updateApiStatus('disconnected', 'No Provider Selected');
+            }
+            
+            updateRunButtonState();
+        }
+
+        // API key validation
+        async function handleApiKeyChange() {
+            currentApiKey = apiKeyInput.value.trim();
+            
+            if (currentApiKey.length > 10) {
+                updateApiStatus('testing', 'Testing API key...');
+                try {
+                    await testApiConnection();
+                    updateApiStatus('connected', 'API Connected');
+                } catch (error) {
+                    updateApiStatus('disconnected', 'Invalid API key');
+                    logMessage('error', `API key validation failed: ${error.message}`);
+                }
+            } else {
+                updateApiStatus('disconnected', 'API Disconnected');
+            }
+            
+            updateRunButtonState();
+        }
+
+        // Framework selection
+        function handleFrameworkChange() {
+            const selectedFramework = frameworkSelect.value;
+            
+            if (selectedFramework && selectedFramework !== 'all') {
+                const framework = FRAMEWORKS[selectedFramework];
+                frameworkName.textContent = framework.name;
+                frameworkDetails.textContent = framework.description;
+                frameworkDescription.style.display = 'block';
+            } else {
+                frameworkDescription.style.display = 'none';
+            }
+            
+            updateRunButtonState();
+        }
+
+        // Update API status indicator
+        function updateApiStatus(status, text) {
+            apiIndicator.className = `api-status-indicator api-${status}`;
+            apiStatusText.textContent = text;
+        }
+
+        // Update run button state
+        function updateRunButtonState() {
+            const hasProvider = currentProvider !== '';
+            const hasApiKey = currentApiKey.length > 10;
+            const hasFramework = frameworkSelect.value !== '';
+            const canRun = hasProvider && hasApiKey && hasFramework && !isRunning;
+            
+            runButton.disabled = !canRun;
+            
+            if (isRunning) {
+                runButtonText.innerHTML = '<div class="loading-spinner"></div>Running Tests...';
+            } else {
+                runButtonText.textContent = 'Run Tests';
+            }
+        }
+
+        // Test API connection for selected provider
+        async function testApiConnection() {
+            if (!currentProvider || !API_PROVIDERS[currentProvider]) {
+                throw new Error('No provider selected');
+            }
+            
+            const provider = API_PROVIDERS[currentProvider];
+            const headers = {
+                'Content-Type': 'application/json'
+            };
+            
+            // Set authentication header based on provider
+            if (provider.authHeader === 'Bearer') {
+                headers['Authorization'] = `Bearer ${currentApiKey}`;
+            } else if (provider.authHeader === 'x-api-key') {
+                headers['x-api-key'] = currentApiKey;
+                headers['anthropic-version'] = '2023-06-01';
+            } else if (provider.authHeader === 'key') {
+                // Gemini uses key as query parameter
+                const testUrl = `${provider.endpoint}${provider.testEndpoint}?key=${currentApiKey}`;
+                const response = await fetch(testUrl, { headers });
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                return response.json();
+            }
+            
+            // Special handling for Claude API test
+            if (provider.requiresSpecialTest && currentProvider === 'claude') {
+                // Add CORS header for browser requests
+                if (provider.requiresCorsHeader) {
+                    headers['anthropic-dangerous-direct-browser-access'] = 'true';
+                }
+                
+                const testBody = {
+                    model: provider.model,
+                    max_tokens: 10,
+                    messages: [{ role: 'user', content: 'Hi' }]
+                };
+                
+                const response = await fetch(`${provider.endpoint}${provider.testEndpoint}`, {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify(testBody)
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(`HTTP ${response.status}: ${errorData.error?.message || response.statusText}`);
+                }
+                return response.json();
+            }
+            
+            const response = await fetch(`${provider.endpoint}${provider.testEndpoint}`, { headers });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            return response.json();
+        }
+
+        // Main test execution
+        async function handleRunTests() {
+            if (isRunning) return;
+            
+            isRunning = true;
+            testResults = [];
+            currentProgress = 0;
+            
+            updateRunButtonState();
+            clearLog();
+            logMessage('info', 'Starting live API test execution...');
+            
+            try {
+                const selectedFramework = frameworkSelect.value;
+                const frameworksToTest = selectedFramework === 'all'
+                    ? Object.keys(FRAMEWORKS)
+                    : [selectedFramework];
+                
+                totalTests = frameworksToTest.length * 15; // 5 tests per tier * 3 tiers
+                updateProgress(0, totalTests);
+                
+                for (const frameworkKey of frameworksToTest) {
+                    await runFrameworkTests(frameworkKey);
+                }
+                
+                displayResults();
+                logMessage('success', 'All live API tests completed successfully!');
+                
+            } catch (error) {
+                logMessage('error', `Test execution failed: ${error.message}`);
+            } finally {
+                isRunning = false;
+                updateRunButtonState();
+                resetTierStatus();
+            }
+        }
+
+        // Run tests for a specific framework
+        async function runFrameworkTests(frameworkKey) {
+            const framework = FRAMEWORKS[frameworkKey];
+            logMessage('info', `Testing ${framework.name} with live API calls...`);
+            
+            for (const tier of ['easy', 'medium', 'hard']) {
+                updateTierStatus(tier, 'running');
+                logMessage('info', `Running ${tier} tier tests...`);
+                
+                const scenarios = TEST_SCENARIOS[tier];
+                for (const scenario of scenarios) {
+                    try {
+                        const result = await runSingleTest(frameworkKey, tier, scenario);
+                        testResults.push(result);
+                        currentProgress++;
+                        updateProgress(currentProgress, totalTests);
+                        
+                        const status = result.success ? 'PASS' : 'FAIL';
+                        logMessage(result.success ? 'success' : 'warning',
+                            `${framework.name}: ${scenario.id} - ${status}`);
+                        
+                        if (result.error) {
+                            logMessage('error', `Error details: ${result.error}`);
+                        }
+                        
+                        // Delay to prevent rate limiting
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                        
+                    } catch (error) {
+                        logMessage('error', `Test ${scenario.id} failed: ${error.message}`);
+                        currentProgress++;
+                        updateProgress(currentProgress, totalTests);
+                    }
+                }
+                
+                updateTierStatus(tier, 'complete');
+            }
+        }
+
+        // Run a single test scenario with live API
+        async function runSingleTest(frameworkKey, tier, scenario) {
+            const framework = FRAMEWORKS[frameworkKey];
+            const prompt = generatePrompt(framework, scenario);
+            
+            // Log the API request
+            const requestLog = logApiRequest(prompt, scenario.id, tier);
+            const startTime = Date.now();
+            
+            try {
+                const providerName = API_PROVIDERS[currentProvider]?.name || currentProvider;
+                logMessage('info', `Calling ${providerName} API for ${scenario.id}...`);
+                
+                const response = await callProviderAPI(prompt);
+                const responseTime = Date.now() - startTime;
+                
+                // Log the API response
+                logApiResponse(requestLog, response, responseTime);
+                
+                const toolCalls = extractToolCalls(response);
+                const metrics = evaluateResponse(scenario, toolCalls);
+                
+                return {
+                    framework: frameworkKey,
+                    tier: tier,
+                    scenario: scenario.id,
+                    description: scenario.description,
+                    expectedTools: scenario.expectedTools,
+                    actualTools: toolCalls,
+                    metrics: metrics,
+                    success: metrics.toolPrecision > 0.5,
+                    timestamp: new Date().toISOString(),
+                    apiResponse: response,
+                    responseTime: responseTime
+                };
+                
+            } catch (error) {
+                const responseTime = Date.now() - startTime;
+                
+                // Log the API error
+                logApiError(requestLog, error, responseTime);
+                
+                return {
+                    framework: frameworkKey,
+                    tier: tier,
+                    scenario: scenario.id,
+                    description: scenario.description,
+                    expectedTools: scenario.expectedTools,
+                    actualTools: [],
+                    metrics: { toolPrecision: 0, argumentF1: 0, ambiguityHitRate: 0 },
+                    success: false,
+                    error: error.message,
+                    timestamp: new Date().toISOString(),
+                    responseTime: responseTime
+                };
+            }
+        }
+
+        // Generate prompt using simplified framework template
+        // Scientific rationale: Simplified templates focus on rhetorical differences rather than complex syntax
+        function generatePrompt(framework, scenario) {
+            const prompt = `${framework.template}
+
+SCENARIO: ${scenario.description}
+
+AVAILABLE TOOLS: ${AVAILABLE_TOOLS.map(t => `${t.function.name} - ${t.function.description}`).join(', ')}
+
+You must respond using the available function tools. Analyze the scenario and call the appropriate functions to complete the task.`;
+
+            return prompt;
+        }
+
+        // Universal API caller that handles all providers
+        async function callProviderAPI(prompt) {
+            if (!currentProvider || !API_PROVIDERS[currentProvider]) {
+                throw new Error('No provider selected');
+            }
+            
+            const provider = API_PROVIDERS[currentProvider];
+            
+            switch (currentProvider) {
+                case 'openai':
+                    return await callOpenAIAPI(prompt, provider);
+                case 'gemini':
+                    return await callGeminiAPI(prompt, provider);
+                case 'mistral':
+                    return await callMistralAPI(prompt, provider);
+                case 'claude':
+                    return await callClaudeAPI(prompt, provider);
+                default:
+                    throw new Error(`Unsupported provider: ${currentProvider}`);
+            }
+        }
+
+        // OpenAI API implementation
+        async function callOpenAIAPI(prompt, provider) {
+            const requestBody = {
+                model: provider.model,
+                messages: [{ role: 'user', content: prompt }],
+                tools: AVAILABLE_TOOLS,
+                tool_choice: 'auto',
+                temperature: 0.1,
+                max_tokens: 1500
+            };
+
+            const response = await fetch(`${provider.endpoint}chat/completions`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${currentApiKey}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestBody)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(`OpenAI API Error ${response.status}: ${errorData.error?.message || response.statusText}`);
+            }
+
+            return await response.json();
+        }
+
+        // Gemini API implementation
+        async function callGeminiAPI(prompt, provider) {
+            // Convert tools to Gemini format
+            const geminiTools = [{
+                function_declarations: AVAILABLE_TOOLS.map(tool => ({
+                    name: tool.function.name,
+                    description: tool.function.description,
+                    parameters: tool.function.parameters
+                }))
+            }];
+
+            const requestBody = {
+                contents: [{ parts: [{ text: prompt }] }],
+                tools: geminiTools,
+                generationConfig: {
+                    temperature: 0.1,
+                    maxOutputTokens: 1500
+                }
+            };
+
+            const response = await fetch(`${provider.endpoint}models/${provider.model}:generateContent?key=${currentApiKey}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(requestBody)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(`Gemini API Error ${response.status}: ${errorData.error?.message || response.statusText}`);
+            }
+
+            return await response.json();
+        }
+
+        // Mistral API implementation
+        async function callMistralAPI(prompt, provider) {
+            const requestBody = {
+                model: provider.model,
+                messages: [{ role: 'user', content: prompt }],
+                tools: AVAILABLE_TOOLS,
+                tool_choice: 'auto',
+                temperature: 0.1,
+                max_tokens: 1500
+            };
+
+            const response = await fetch(`${provider.endpoint}chat/completions`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${currentApiKey}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestBody)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(`Mistral API Error ${response.status}: ${errorData.error?.message || response.statusText}`);
+            }
+
+            return await response.json();
+        }
+
+        // Claude API implementation
+        async function callClaudeAPI(prompt, provider) {
+            // Claude uses a different format - tools are passed separately
+            const requestBody = {
+                model: provider.model,
+                max_tokens: 1500,
+                temperature: 0.1,
+                messages: [{ role: 'user', content: prompt }],
+                tools: AVAILABLE_TOOLS.map(tool => ({
+                    name: tool.function.name,
+                    description: tool.function.description,
+                    input_schema: tool.function.parameters
+                }))
+            };
+
+            const headers = {
+                'x-api-key': currentApiKey,
+                'anthropic-version': '2023-06-01',
+                'Content-Type': 'application/json'
+            };
+
+            // Add CORS header for browser requests
+            if (provider.requiresCorsHeader) {
+                headers['anthropic-dangerous-direct-browser-access'] = 'true';
+            }
+
+            const response = await fetch(`${provider.endpoint}messages`, {
+                method: 'POST',
+                headers: headers,
+                body: JSON.stringify(requestBody)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                // Enhanced error handling for CORS and network issues
+                if (response.status === 0 || !response.status) {
+                    throw new Error('Network error: Failed to fetch - likely CORS or connectivity issue');
+                }
+                throw new Error(`Claude API Error ${response.status}: ${errorData.error?.message || response.statusText}`);
+            }
+
+            return await response.json();
+        }
+
+        // Extract tool calls from API response (handles all providers)
+        function extractToolCalls(response) {
+            const toolCalls = [];
+            
+            try {
+                switch (currentProvider) {
+                    case 'openai':
+                    case 'mistral':
+                        return extractOpenAIMistralToolCalls(response);
+                    case 'gemini':
+                        return extractGeminiToolCalls(response);
+                    case 'claude':
+                        return extractClaudeToolCalls(response);
+                    default:
+                        logMessage('warning', `Unknown provider for tool extraction: ${currentProvider}`);
+                        return [];
+                }
+            } catch (error) {
+                logMessage('error', `Tool extraction failed: ${error.message}`);
+                return [];
+            }
+        }
+
+        // Extract tool calls from OpenAI/Mistral response
+        function extractOpenAIMistralToolCalls(response) {
+            const toolCalls = [];
+            
+            if (response.choices && response.choices[0] && response.choices[0].message) {
+                const message = response.choices[0].message;
+                
+                if (message.tool_calls && Array.isArray(message.tool_calls)) {
+                    for (const toolCall of message.tool_calls) {
+                        try {
+                            const args = typeof toolCall.function.arguments === 'string'
+                                ? JSON.parse(toolCall.function.arguments)
+                                : toolCall.function.arguments;
+                                
+                            toolCalls.push({
+                                name: toolCall.function.name,
+                                args: args || {}
+                            });
+                        } catch (error) {
+                            logMessage('warning', `Failed to parse tool call arguments: ${error.message}`);
+                        }
+                    }
+                }
+            }
+            
+            return toolCalls;
+        }
+
+        // Extract tool calls from Gemini response
+        function extractGeminiToolCalls(response) {
+            const toolCalls = [];
+            
+            if (response.candidates && response.candidates[0] && response.candidates[0].content) {
+                const content = response.candidates[0].content;
+                
+                if (content.parts) {
+                    for (const part of content.parts) {
+                        if (part.functionCall) {
+                            toolCalls.push({
+                                name: part.functionCall.name,
+                                args: part.functionCall.args || {}
+                            });
+                        }
+                    }
+                }
+            }
+            
+            return toolCalls;
+        }
+
+        // Extract tool calls from Claude response
+        function extractClaudeToolCalls(response) {
+            const toolCalls = [];
+            
+            if (response.content && Array.isArray(response.content)) {
+                for (const content of response.content) {
+                    if (content.type === 'tool_use') {
+                        toolCalls.push({
+                            name: content.name,
+                            args: content.input || {}
+                        });
+                    }
+                }
+            }
+            
+            return toolCalls;
+        }
+
+        // Evaluate response against expected results
+        function evaluateResponse(scenario, actualTools) {
+            const expectedTools = scenario.expectedTools;
+            
+            // Calculate Tool Call Precision
+            let correctTools = 0;
+            for (const actual of actualTools) {
+                if (expectedTools.some(expected => expected.name === actual.name)) {
+                    correctTools++;
+                }
+            }
+            const toolPrecision = actualTools.length > 0 ? correctTools / actualTools.length : 0;
+            
+            // Calculate Argument F1 Score
+            let correctArgs = 0;
+            let totalExpectedArgs = 0;
+            let totalActualArgs = 0;
+            
+            for (const expected of expectedTools) {
+                const matching = actualTools.find(actual => actual.name === expected.name);
+                if (matching) {
+                    const expectedArgKeys = Object.keys(expected.args || {});
+                    const actualArgKeys = Object.keys(matching.args || {});
+                    
+                    totalExpectedArgs += expectedArgKeys.length;
+                    totalActualArgs += actualArgKeys.length;
+                    
+                    for (const key of expectedArgKeys) {
+                        if (matching.args && matching.args[key] !== undefined) {
+                            // More flexible argument matching
+                            const expectedVal = expected.args[key];
+                            const actualVal = matching.args[key];
+                            
+                            if (typeof expectedVal === typeof actualVal) {
+                                if (typeof expectedVal === 'string') {
+                                    // Case-insensitive string comparison
+                                    if (expectedVal.toLowerCase() === actualVal.toLowerCase()) {
+                                        correctArgs++;
+                                    }
+                                } else if (JSON.stringify(expectedVal) === JSON.stringify(actualVal)) {
+                                    correctArgs++;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            const argPrecision = totalActualArgs > 0 ? correctArgs / totalActualArgs : 0;
+            const argRecall = totalExpectedArgs > 0 ? correctArgs / totalExpectedArgs : 0;
+            const argumentF1 = (argPrecision + argRecall) > 0 ?
+                (2 * argPrecision * argRecall) / (argPrecision + argRecall) : 0;
+            
+            // Calculate Ambiguity Hit Rate - FIXED SCIENTIFIC CALCULATION
+            // Scientific rationale: For ambiguous prompts expecting no tools, success = no tool calls
+            // For ambiguous prompts expecting tools, success = correct handling of ambiguity
+            let ambiguityHitRate = 0;
+            if (scenario.expectsNoTools) {
+                // For scenarios that should result in no tool calls (highly ambiguous)
+                ambiguityHitRate = actualTools.length === 0 ? 1.0 : 0.0;
+            } else if (scenario.ambiguityLevel > 0.5) {
+                // For ambiguous scenarios that still expect tool calls
+                ambiguityHitRate = toolPrecision > 0.5 ? 1.0 : 0.0;
+            } else {
+                // For clear scenarios, ambiguity hit rate equals tool precision
+                ambiguityHitRate = toolPrecision;
+            }
+            
+            return {
+                toolPrecision: Math.round(toolPrecision * 100) / 100,
+                argumentF1: Math.round(argumentF1 * 100) / 100,
+                ambiguityHitRate: Math.round(ambiguityHitRate * 100) / 100
+            };
+        }
+
+        // Display results in table
+        function displayResults() {
+            if (testResults.length === 0) return;
+            
+            emptyState.style.display = 'none';
+            resultsTable.style.display = 'table';
+            
+            // Aggregate results by framework and tier
+            const aggregated = aggregateResults();
+            
+            resultsBody.innerHTML = '';
+            for (const result of aggregated) {
+                const row = document.createElement('tr');
+                
+                const compositeScore = calculateCompositeScore(
+                    result.toolPrecision,
+                    result.argumentF1,
+                    result.ambiguityHitRate
+                );
+                
+                row.innerHTML = `
+                    <td>${FRAMEWORKS[result.framework].name}</td>
+                    <td>${result.tier.charAt(0).toUpperCase() + result.tier.slice(1)}</td>
+                    <td><span class="metric-score ${getScoreClass(result.toolPrecision)}">${(result.toolPrecision * 100).toFixed(1)}%</span></td>
+                    <td><span class="metric-score ${getScoreClass(result.argumentF1)}">${result.argumentF1.toFixed(2)}</span></td>
+                    <td><span class="metric-score ${getScoreClass(result.ambiguityHitRate)}">${(result.ambiguityHitRate * 100).toFixed(1)}%</span></td>
+                    <td><span class="metric-score ${getScoreClass(compositeScore)}">${(compositeScore * 100).toFixed(1)}%</span></td>
+                `;
+                
+                resultsBody.appendChild(row);
+            }
+        }
+
+        // Aggregate results by framework and tier
+        function aggregateResults() {
+            const aggregated = [];
+            const groups = {};
+            
+            // Group by framework and tier
+            for (const result of testResults) {
+                const key = `${result.framework}-${result.tier}`;
+                if (!groups[key]) {
+                    groups[key] = {
+                        framework: result.framework,
+                        tier: result.tier,
+                        results: []
+                    };
+                }
+                groups[key].results.push(result);
+            }
+            
+            // Calculate averages for each group
+            for (const group of Object.values(groups)) {
+                const results = group.results;
+                const avgMetrics = {
+                    toolPrecision: results.reduce((sum, r) => sum + r.metrics.toolPrecision, 0) / results.length,
+                    argumentF1: results.reduce((sum, r) => sum + r.metrics.argumentF1, 0) / results.length,
+                    ambiguityHitRate: results.reduce((sum, r) => sum + r.metrics.ambiguityHitRate, 0) / results.length
+                };
+                
+                aggregated.push({
+                    framework: group.framework,
+                    tier: group.tier,
+                    ...avgMetrics
+                });
+            }
+            
+            return aggregated.sort((a, b) => {
+                if (a.framework !== b.framework) {
+                    return a.framework.localeCompare(b.framework);
+                }
+                const tierOrder = { easy: 1, medium: 2, hard: 3 };
+                return tierOrder[a.tier] - tierOrder[b.tier];
+            });
+        }
+
+        // Calculate composite score
+        function calculateCompositeScore(toolPrecision, argumentF1, ambiguityHitRate) {
+            return (toolPrecision * 0.4) + (argumentF1 * 0.35) + (ambiguityHitRate * 0.25);
+        }
+
+        // Get CSS class for score
+        function getScoreClass(score) {
+            if (score >= 0.8) return 'score-excellent';
+            if (score >= 0.6) return 'score-good';
+            return 'score-poor';
+        }
+
+        // Update tier status
+        function updateTierStatus(tier, status) {
+            const statusElement = document.getElementById(`${tier}Status`);
+            if (statusElement) {
+                statusElement.className = `status-icon status-${status}`;
+            }
+        }
+
+        // Reset tier status
+        function resetTierStatus() {
+            ['easy', 'medium', 'hard'].forEach(tier => {
+                updateTierStatus(tier, 'pending');
+            });
+        }
+
+        // Update progress
+        function updateProgress(current, total) {
+            const percentage = total > 0 ? (current / total) * 100 : 0;
+            progressFill.style.width = `${percentage}%`;
+            progressText.textContent = `${current}/${total} tests (${Math.round(percentage)}%)`;
+        }
+
+        // Logging functions
+        function logMessage(level, message) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
+            logEntry.innerHTML = `
+                <span class="log-timestamp">[${timestamp}]</span>
+                <span class="log-level-${level}">${message}</span>
+            `;
+            logPanel.appendChild(logEntry);
+            logPanel.scrollTop = logPanel.scrollHeight;
+        }
+
+        function clearLog() {
+            logPanel.innerHTML = '';
+        }
+
+        // Table sorting
+        let sortColumn = -1;
+        let sortDirection = 1;
+
+        function sortTable(columnIndex) {
+            const table = resultsTable;
+            const tbody = resultsBody;
+            const rows = Array.from(tbody.rows);
+            
+            if (sortColumn === columnIndex) {
+                sortDirection *= -1;
+            } else {
+                sortColumn = columnIndex;
+                sortDirection = 1;
+            }
+            
+            rows.sort((a, b) => {
+                let aVal = a.cells[columnIndex].textContent.trim();
+                let bVal = b.cells[columnIndex].textContent.trim();
+                
+                // Handle percentage and numeric values
+                if (aVal.includes('%')) {
+                    aVal = parseFloat(aVal.replace('%', ''));
+                    bVal = parseFloat(bVal.replace('%', ''));
+                } else if (!isNaN(parseFloat(aVal))) {
+                    aVal = parseFloat(aVal);
+                    bVal = parseFloat(bVal);
+                }
+                
+                if (aVal < bVal) return -1 * sortDirection;
+                if (aVal > bVal) return 1 * sortDirection;
+                return 0;
+            });
+            
+            // Clear and re-append sorted rows
+            tbody.innerHTML = '';
+            rows.forEach(row => tbody.appendChild(row));
+            
+            // Update header indicators
+            const headers = table.querySelectorAll('th');
+            headers.forEach((header, index) => {
+                header.style.background = index === columnIndex ? '#2c3e50' : '#34495e';
+            });
+        }
+
+        // Initialize the application
+        function initializeApp() {
+            // Attach event listeners after DOM is loaded
+            providerSelect.addEventListener('change', handleProviderChange);
+            apiKeyInput.addEventListener('input', handleApiKeyChange);
+            frameworkSelect.addEventListener('change', handleFrameworkChange);
+            runButton.addEventListener('click', handleRunTests);
+            
+            // Audit system event listeners
+            const auditSearch = document.getElementById('auditSearch');
+            const auditProviderFilter = document.getElementById('auditProviderFilter');
+            const auditStatusFilter = document.getElementById('auditStatusFilter');
+            
+            if (auditSearch) {
+                auditSearch.addEventListener('input', applyAuditFilters);
+            }
+            if (auditProviderFilter) {
+                auditProviderFilter.addEventListener('change', applyAuditFilters);
+            }
+            if (auditStatusFilter) {
+                auditStatusFilter.addEventListener('change', applyAuditFilters);
+            }
+            
+            // Initialize audit stats
+            updateAuditStats();
+            
+            logMessage('info', 'Multi-Provider LLM Experiment Environment initialized');
+            logMessage('info', 'Select a provider and enter your API key to begin live testing');
+            updateRunButtonState();
+        }
+
+        // Start the application when DOM is loaded
+        document.addEventListener('DOMContentLoaded', initializeApp);
+    </script>
+</body>
+</html>
