@@ -16,7 +16,7 @@ We take security vulnerabilities seriously. If you discover a security vulnerabi
 ### How to Report
 
 1. **Do NOT** create a public GitHub issue for security vulnerabilities
-2. Send an email to [security@yourproject.com] with the following information:
+2. Send an email to derkaal@gmail.com with the following information:
    - Description of the vulnerability
    - Steps to reproduce the issue
    - Potential impact assessment
